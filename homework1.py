@@ -2,41 +2,43 @@ import aiohttp
 from aiohttp import web
 #import nest_asyncio
 #nest_asyncio.apply()
-import sqlite3
+#import sqlite3
+import aiosqlite as lite
 from datetime import date
 
-def get_store_db():
-    conn=sqlite3.connect("shop.db")
-    cursor = conn.cursor()
+async def get_store_db():
+    conn=await lite.connect("shop.db")
+    cursor = await conn.cursor()
     sql="select * from store;"
-    cursor.execute(sql)
-    rec = cursor.fetchall()
-    cursor.close()
+    await cursor.execute(sql)
+    rec = await cursor.fetchall()
+    await cursor.close()
     dic={}
     tmp_lst=[]
     for i in rec:
         tmp_lst.append({"store_id":i[0],"address":i[1]})
     dic["stores"]=tmp_lst
+    await conn.close()
     return dic
 
-def get_item_db():
-    conn=sqlite3.connect("shop.db")
-    cursor = conn.cursor()
+async def get_item_db():
+    conn=await lite.connect("shop.db")
+    cursor = await conn.cursor()
     sql="select * from item;"
-    cursor.execute(sql)
-    rec = cursor.fetchall()
-    cursor.close()
+    await cursor.execute(sql)
+    rec = await cursor.fetchall()
+    await cursor.close()
     dic={}
     tmp_lst=[]
     for i in rec:
         tmp_lst.append({"item_id":i[0],"name":i[1],"price":i[2]})
     dic["items"]=tmp_lst
+    await conn.close()
     return dic
-#CREATE TABLE item(id INTEGER PRIMARY KEY AUTOINCREMENT, name TEXT, price REAL)
 
-def get_top_store_db():
-    conn=sqlite3.connect("shop.db")
-    cursor = conn.cursor()
+async def get_top_store_db():
+    conn=await lite.connect("shop.db")
+    cursor = await conn.cursor()
     sql="select * from\
         (\
             select *  from(\
@@ -46,19 +48,20 @@ def get_top_store_db():
                 group by st.id, st.address\
             ) order by summ desc\
         )where rownum <= 10;"#написать запрос с джоином
-    cursor.execute(sql)
-    rec = cursor.fetchall()
-    cursor.close()
+    await cursor.execute(sql)
+    rec = await cursor.fetchall()
+    await cursor.close()
     dic={}
     tmp_lst=[]
     for i in rec:
         tmp_lst.append({"store_id":i[0],"address":i[1],"summ":i[2]})
     dic["stores"]=tmp_lst
+    await conn.close()
     return dic
 
-def get_top_item_db():
-    conn=sqlite3.connect("shop.db")
-    cursor = conn.cursor()
+async def get_top_item_db():
+    conn=await lite.connect("shop.db")
+    cursor = await conn.cursor()
     sql="select * from\
         (\
             select * from(\
@@ -67,14 +70,15 @@ def get_top_item_db():
                 group by i.id, i.name\
             ) order by cnt desc\
         )where rownum <= 10;"#написать запрос с джоином
-    cursor.execute(sql)
-    rec = cursor.fetchall()
-    cursor.close()
+    await cursor.execute(sql)
+    rec = await cursor.fetchall()
+    await cursor.close()
     dic={}
     tmp_lst=[]
     for i in rec:
         tmp_lst.append({"item_id":i[0],"name":i[1],"count":i[2]})
     dic["items"]=tmp_lst
+    await conn.close()
     return dic
 
 routes = web.RouteTableDef()
@@ -86,32 +90,33 @@ async def post_sales_handler(request):
     Data = await request.json()
     #store = post["store"]["id"]
     #item = post["store"]["item"]
-    conn=sqlite3.connect("shop.db")
-    cursor = conn.cursor()
-    print(Data)
-    print(((str(today),int(Data["item_id"]),int(Data["store_id"]))))
+    conn=await lite.connect("shop.db")
+    cursor = await conn.cursor()
+    #print(Data)
+    #print(((str(today),int(Data["item_id"]),int(Data["store_id"]))))
     salesData=((str(today),int(Data["item_id"]),int(Data["store_id"])))
-    cursor.execute("INSERT INTO sales (sale_time,item_id,store_id) VALUES( ?, ?, ?)", tuple(salesData))
-    conn.commit()
-    cursor.close()
+    await cursor.execute("INSERT INTO sales (sale_time,item_id,store_id) VALUES( ?, ?, ?)", tuple(salesData))
+    await conn.commit()
+    await cursor.close()
+    await conn.close()
     return web.Response(text="OK")
 
 @routes.get('/get_stores')
 async def get_store_handler(request):
-    s=get_store_db()
+    s=await get_store_db()
     #return web.Response(text=s) 
     return web.json_response(s)
 @routes.get('/get_items') 
 async def get_items_handler(request):
-    s=get_item_db()
+    s=await get_item_db()
     return web.json_response(s)
 @routes.get('/get_top_stores') 
 async def get_top_stores_handler(request):
-    s=get_top_store_db()
+    s=await get_top_store_db()
     return web.json_response(s)
 @routes.get('/get_top_items') 
 async def get_top_items_handler(request):
-    s=get_top_item_db()
+    s=await get_top_item_db()
     return web.json_response(s)
 
 
