@@ -5,6 +5,7 @@ from aiohttp import web
 #import sqlite3
 import aiosqlite as lite
 from datetime import date
+#для ПР
 
 async def get_store_db():
     conn=await lite.connect("shop.db")
